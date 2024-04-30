@@ -1,0 +1,18 @@
+[package]
+name = "opentelemetry-tracing"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
+rand = { version="0.8.5", features = ["std", "std_rng","small_rng"]}
+
+[dev-dependencies]
+criterion = "0.4"
+
+[[bench]]
+name = "span_creation"
+harness = false # This tells Cargo to not use the default test harness and allows Criterion to control the execution of benchmarks.
