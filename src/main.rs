@@ -16,6 +16,7 @@ fn main() {
         attribute2 = "v2"
     );
     let _guard = span.enter();
+    warn!(name: "my-event-name-inside-outer-span", event_id = 10, user_name = "otel");
     let span_inner = span!(
         Level::TRACE,
         "Inner Span",
@@ -25,5 +26,5 @@ fn main() {
     );
     let _guard_inner = span_inner.enter();
     span_inner.record("attribute3", "value3");
-    warn!(name: "my-event-name", target: "my-system2", event_id = 20, user_name = "otel", user_email = "otel@opentelemetry.io");
+    warn!(name: "my-event-name-inside-inner-span", event_id = 20, user_name = "otel");
 }

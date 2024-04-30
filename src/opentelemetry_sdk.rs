@@ -82,8 +82,15 @@ impl ShouldSample for OTelSampler {
     }
 }
 
+#[derive(PartialEq, Eq)]
+pub enum EventExportMode {
+    LogRecord,
+    SpanEvent,
+}
+
 pub struct OpenTelemetrySdk {
     sampler: OTelSampler,
+    event_export_mode: EventExportMode,
 }
 
 impl Default for OpenTelemetrySdk {
@@ -96,6 +103,7 @@ impl OpenTelemetrySdk {
     pub fn new() -> OpenTelemetrySdk {
         OpenTelemetrySdk {
             sampler: OTelSampler,
+            event_export_mode: EventExportMode::SpanEvent,
         }
     }
 }
@@ -176,8 +184,28 @@ where
         values.record(existing_span);
     }
 
-    fn on_event(&self, _event: &Event<'_>, _ctx: Context<'_, S>) {
-        // This is where we either add SpanEvent to the Span,
-        // or make a LogRecord.
+    fn on_event(&self, event: &Event<'_>, ctx: Context<'_, S>) {
+        if event.metadata().is_event() {
+            if let Some(span) = event.parent().and_then(|id| ctx.span(id)).or_else(|| {
+                event
+                    .is_contextual()
+                    .then(|| ctx.lookup_current())
+                    .flatten()
+            }) {
+                let mut extensions = span.extensions_mut();
+                let existing_span = extensions
+                    .get_mut::<OTelSpan>()
+                    .expect("Span expected here");
+
+                if self.event_export_mode == EventExportMode::SpanEvent {
+                    if existing_span.is_recording {
+                        // Add SpanEvent to the Span.
+                        println!("SpanEvent {} for Span with SpanId {}", event.metadata().name(), existing_span.span_id.0);
+                    }
+                } else {
+                    // Emit LogRecord using the Event, similar to how opentelemetry-tracing-appender works today.
+                }
+            }
+        }
     }
 }
