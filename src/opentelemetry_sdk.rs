@@ -41,15 +41,13 @@ pub struct OTelSpan {
 impl OTelSpan {
     pub fn new(
         name: String,
-        trace_id: Option<TraceId>,
+        trace_id: TraceId,
         parent_span_id: Option<SpanId>,
         is_recording: bool,
     ) -> OTelSpan {
         OTelSpan {
             name,
-            trace_id: trace_id.unwrap_or_else(|| {
-                CURRENT_RNG.with(|rng| TraceId::from(rng.borrow_mut().gen::<u128>()))
-            }),
+            trace_id: trace_id,
             span_id: CURRENT_RNG.with(|rng| SpanId::from(rng.borrow_mut().gen::<u64>())),
             parent_span_id,
             start_time: SystemTime::now(),
@@ -128,7 +126,7 @@ where
             let sampling_result = self.sampler.should_sample(&parent_trace_id);
             let mut span = OTelSpan::new(
                 attrs.metadata().name().to_string(),
-                Some(parent_trace_id),
+                parent_trace_id,
                 Some(parent_span_id),
                 sampling_result,
             );
@@ -144,7 +142,7 @@ where
             let sampling_result = self.sampler.should_sample(&trace_id_to_be_created_span);
             let mut span = OTelSpan::new(
                 attrs.metadata().name().to_string(),
-                Some(trace_id_to_be_created_span),
+                trace_id_to_be_created_span,
                 None,
                 sampling_result,
             );
