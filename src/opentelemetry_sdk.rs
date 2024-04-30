@@ -1,7 +1,7 @@
 use std::{cell::RefCell, collections::HashMap, time::SystemTime};
 
 use rand::{rngs, Rng, SeedableRng};
-use tracing::{field::Visit, span};
+use tracing::{field::Visit, span, Event};
 use tracing_subscriber::{layer::Context, registry::LookupSpan, Layer};
 
 thread_local! {
@@ -174,5 +174,10 @@ where
             .get_mut::<OTelSpan>()
             .expect("Span expected here");
         values.record(existing_span);
+    }
+
+    fn on_event(&self, _event: &Event<'_>, _ctx: Context<'_, S>) {
+        // This is where we either add SpanEvent to the Span,
+        // or make a LogRecord.
     }
 }
