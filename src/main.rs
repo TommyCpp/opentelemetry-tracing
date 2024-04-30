@@ -1,5 +1,5 @@
 use opentelemetry_tracing::opentelemetry_sdk;
-use tracing::{debug, error, field, info, span, trace, warn, Level};
+use tracing::{field, span, warn, Level};
 use tracing_subscriber::prelude::*;
 
 fn main() {

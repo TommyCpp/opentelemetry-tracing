@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, sync::Mutex, time::SystemTime};
+use std::{cell::RefCell, collections::HashMap, time::SystemTime};
 
 use rand::{rngs, Rng, SeedableRng};
 use tracing::{field::Visit, span};
@@ -55,7 +55,7 @@ impl OTelSpan {
             start_time: SystemTime::now(),
             end_time: SystemTime::now(),
             attributes: HashMap::new(),
-            is_recording: is_recording,
+            is_recording,
         }
     }
 }
@@ -115,7 +115,7 @@ where
             // parent span exists.
             // reuse traceid for the new span being created
             // and store parent span id to the new span being created.
-            let parent_span = ctx.span(&parent_id).expect("Parent span expected here");
+            let parent_span = ctx.span(parent_id).expect("Parent span expected here");
             let mut parent_extensions = parent_span.extensions_mut();
             let parent_span = parent_extensions
                 .get_mut::<OTelSpan>()
@@ -123,6 +123,8 @@ where
 
             let parent_trace_id = parent_span.trace_id;
             let parent_span_id = parent_span.span_id;
+
+            // Overly simplified sampling logic for POC.
             let sampling_result = self.sampler.should_sample(&parent_trace_id);
             let mut span = OTelSpan::new(
                 attrs.metadata().name().to_string(),
@@ -168,7 +170,7 @@ where
     }
 
     fn on_record(&self, span: &span::Id, values: &span::Record<'_>, ctx: Context<'_, S>) {
-        let span = ctx.span(&span).expect("Span expected here");
+        let span = ctx.span(span).expect("Span expected here");
         let mut extensions = span.extensions_mut();
         let existing_span = extensions
             .get_mut::<OTelSpan>()
