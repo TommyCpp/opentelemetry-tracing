@@ -204,6 +204,7 @@ where
                     }
                 } else {
                     // Emit LogRecord using the Event, similar to how opentelemetry-tracing-appender works today.
+                    println!("LogRecord {} for Span with SpanId {}", event.metadata().name(), existing_span.span_id.0);
                 }
             }
         }

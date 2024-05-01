@@ -2,6 +2,7 @@ use opentelemetry_tracing::opentelemetry_sdk;
 use tracing::{field, span, warn, Level};
 use tracing_subscriber::prelude::*;
 
+// cargo run --example simple
 fn main() {
     let otel_sdk_layer = opentelemetry_sdk::OpenTelemetrySdk::new();
     tracing_subscriber::registry()
