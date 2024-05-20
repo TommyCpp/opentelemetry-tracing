@@ -1,6 +1,7 @@
 use opentelemetry_tracing::opentelemetry_sdk;
 use tracing::{field, span, warn, Level};
 use tracing_subscriber::prelude::*;
+use opentelemetry_tracing::opentelemetry_sdk::OtelSpanExt;
 
 // cargo run --example simple
 fn main() {
@@ -16,6 +17,7 @@ fn main() {
         attribute1 = "v1",
         attribute2 = "v2"
     );
+    span.set_parent("262603779606908057216172753575155927278:4855502779463763640:0:1".to_string());
     let _guard = span.enter();
     warn!(name: "my-event-name-inside-outer-span", event_id = 10, user_name = "otel");
     let span_inner = span!(
