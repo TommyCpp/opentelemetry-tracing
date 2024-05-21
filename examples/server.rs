@@ -34,7 +34,9 @@ async fn hello(req: Request<impl hyper::body::Body>) -> Result<Response<Full<Byt
     // 1. Add some information in Regitry to represent the "fake span", assign a tracing span Id for it
     // 2. Fake span cannot be entered or exited, users cannot add events onto it because it doesnt' exist in localhost
     // 3. Fake span can be used as parent for new spans.
-    span.set_parent("262603779606908057216172753575155927278:4855502779463763640:0:1".to_string());
+    req.headers().get("uber-trace-id").map(|trace_id| {
+        span.set_parent(trace_id.to_str().unwrap().to_string());
+    });
 
     let _guard = span.enter();
     warn!(name: "my-event-name-inside-outer-span", event_id = 10, user_name = "otel");

@@ -222,6 +222,10 @@ pub trait OtelSpanExt {
     fn parent_span_id(&self) -> SpanId;
 
     fn extract_jaeger_propagation(&self) -> String;
+
+    fn with_otel_span<F, T>(&self, f: F) -> T
+        where F: Fn(&OTelSpan) -> Option<T>,
+              T: Default;
 }
 
 impl OtelSpanExt for Span {
@@ -236,50 +240,34 @@ impl OtelSpanExt for Span {
                 if let Some(otel_span) = extensions.get_mut::<OTelSpan>() {
                     let (trace_id, span_id) = parse_jaeger_trace_id(&jaeger_format);
                     otel_span.trace_id = trace_id;
-                    otel_span.span_id = span_id;
+                    otel_span.parent_span_id = Some(span_id);
                 }
             }
         });
     }
 
     fn tract_id(&self) -> TraceId {
-        let mut trace_id = None;
-        self.with_subscriber(|(id, subscriber)| {
-            if let Some(registry) = subscriber.downcast_ref::<Registry>() {
-                let span = registry
-                    .span(id)
-                    .expect("registry should have a span for the current ID");
-
-                let mut extensions = span.extensions_mut();
-                if let Some(otel_span) = extensions.get_mut::<OTelSpan>() {
-                    trace_id = Some(otel_span.trace_id);
-                }
-            }
-        });
-
-        trace_id.unwrap_or_default()
+        self.with_otel_span(|otel_span| Some(otel_span.trace_id))
     }
 
     fn span_id(&self) -> SpanId {
-        let mut span_id = None;
-        self.with_subscriber(|(id, subscriber)| {
-            if let Some(registry) = subscriber.downcast_ref::<Registry>() {
-                let span = registry
-                    .span(id)
-                    .expect("registry should have a span for the current ID");
-
-                let mut extensions = span.extensions_mut();
-                if let Some(otel_span) = extensions.get_mut::<OTelSpan>() {
-                    span_id = Some(otel_span.span_id);
-                }
-            }
-        });
-
-        span_id.unwrap_or_default()
+        self.with_otel_span(|otel_span| Some(otel_span.span_id))
     }
 
     fn parent_span_id(&self) -> SpanId {
-        let mut parent_span_id = None;
+        self.with_otel_span(|otel_span| otel_span.parent_span_id)
+    }
+
+    // Get the span, extract trace id, span id, parent span id and sampling decision
+    // build a jaeger propagation header.
+    fn extract_jaeger_propagation(&self) -> String {
+        return format!("{}:{}:{}:{}", self.tract_id().0, self.span_id().0, self.parent_span_id().0, 1);
+    }
+
+    fn with_otel_span<F, T>(&self, f: F) -> T
+        where F: Fn(&OTelSpan) -> Option<T>,
+              T: Default {
+        let mut result: Option<T> = None;
         self.with_subscriber(|(id, subscriber)| {
             if let Some(registry) = subscriber.downcast_ref::<Registry>() {
                 let span = registry
@@ -288,15 +276,11 @@ impl OtelSpanExt for Span {
 
                 let mut extensions = span.extensions_mut();
                 if let Some(otel_span) = extensions.get_mut::<OTelSpan>() {
-                    parent_span_id = otel_span.parent_span_id;
+                    result = f(otel_span);
                 }
             }
         });
-        parent_span_id.unwrap_or_default()
-    }
-
-    fn extract_jaeger_propagation(&self) -> String {
-        return format!("{}:{}:{}:{}", self.tract_id().0, self.span_id().0, self.parent_span_id().0, 1);
+        result.unwrap_or_default()
     }
 }
 

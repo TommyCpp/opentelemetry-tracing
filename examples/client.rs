@@ -7,23 +7,26 @@ use tokio::net::TcpStream;
 
 use hyper_util::rt::TokioIo;
 use tracing::{Level, span};
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use opentelemetry_tracing::opentelemetry_sdk;
 use opentelemetry_tracing::opentelemetry_sdk::OtelSpanExt;
 
 // A simple type alias so as to DRY.
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
 #[tokio::main]
 async fn main() -> Result<()> {
-
-    // Some simple CLI args requirements...
-    let url = "http://127.0.0.1:3000";
+    // setup local telemetry
+    let otel_sdk_layer = opentelemetry_sdk::OpenTelemetrySdk::new();
+    tracing_subscriber::registry()
+        // .with(fmt::layer()) // Uncomment this line to see the fmt layer in action
+        .with(otel_sdk_layer)
+        .init();
 
     // HTTPS requires picking a TLS implementation, so give a better
     // warning if the user tries to request an 'https' URL.
-    let url = url.parse::<hyper::Uri>().unwrap();
-    if url.scheme_str() != Some("http") {
-        println!("This example only works with 'http' URLs.");
-        return Ok(());
-    }
+    let url = "http://127.0.0.1:3000".parse::<hyper::Uri>().unwrap();
 
     fetch_url(url).await
 }
