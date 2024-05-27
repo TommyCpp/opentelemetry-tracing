@@ -11,14 +11,15 @@ use tokio::net::TcpListener;
 use tracing::{field, Level, span, warn};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-use opentelemetry_tracing::opentelemetry_sdk;
+use opentelemetry_tracing::{opentelemetry_sdk, span_with_remote_parent};
 use opentelemetry_tracing::opentelemetry_sdk::OtelSpanExt;
 
 
 // An async function that consumes a request, does nothing with it and returns a
 // response.
 async fn hello(req: Request<impl hyper::body::Body>) -> Result<Response<Full<Bytes>>, Infallible> {
-    let span = span!(
+    let span = span_with_remote_parent!(
+        req.headers().get("uber-trace-id").unwrap().to_str().unwrap().to_string(),
         Level::TRACE,
         "Main Span",
         attribute1 = "v1",
@@ -34,9 +35,6 @@ async fn hello(req: Request<impl hyper::body::Body>) -> Result<Response<Full<Byt
     // 1. Add some information in Regitry to represent the "fake span", assign a tracing span Id for it
     // 2. Fake span cannot be entered or exited, users cannot add events onto it because it doesnt' exist in localhost
     // 3. Fake span can be used as parent for new spans.
-    req.headers().get("uber-trace-id").map(|trace_id| {
-        span.set_parent(trace_id.to_str().unwrap().to_string());
-    });
 
     let _guard = span.enter();
     warn!(name: "my-event-name-inside-outer-span", event_id = 10, user_name = "otel");
